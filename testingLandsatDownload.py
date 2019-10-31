@@ -50,50 +50,63 @@ def cloudscore(image):
 
 withCloudiness = col.map(algorithm = cloudscore)
 
-filteredCollection = withCloudiness.filter(ee.Filter.lt('cloud', 10))
+filteredCollection = withCloudiness.filter(ee.Filter.lt('cloud', 20))
+print(filteredCollection.size().getInfo())
+# filteredCollection = filteredCollection.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6'])
+# collectionList = filteredCollection.toList(col.size())
+# collectionSize = collectionList.size().getInfo()
+# print(collectionSize)
+# for i in range(collectionSize):
+#     task = ee.batch.Export.image.toDrive(
+#         image = ee.Image(collectionList.get(i)).clip(region),
+#         scale = 30, region = region.bounds().getInfo()['coordinates'], folder = "L8BayiGlacier01130116", fileNamePrefix = 'BayiL8' + str(i + 1))
+#     task.start()
+
+# Landsat 7
+col2 = ee.ImageCollection('LANDSAT/LE07/C01/T1_TOA')
+col2 = col2.filterDate('1999-01-01','2006-01-01')
+col2 = col2.filterBounds(region)
+        #.select(['B1','B2','B3','B4','B5','B6'])
+
+count = col2.size()
+print(count.getInfo())
+
+withCloudiness = col2.map(algorithm = cloudscore)
+
+filteredCollection = withCloudiness.filter(ee.Filter.lt('cloud', 20))
+print(filteredCollection.size().getInfo())
+filteredCollection = filteredCollection.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6_VCID_1'])
+collectionList = filteredCollection.toList(col2.size())
+collectionSize = filteredCollection.size().getInfo()
+print(collectionSize)
+# for i in range(collectionSize):
+#     task = ee.batch.Export.image.toDrive(
+#         image = ee.Image(collectionList.get(i)).clip(region),
+#         scale = 30, region = region.bounds().getInfo()['coordinates'],
+#         folder = "L7BayiGlacier01990106", fileNamePrefix = 'BayiL7' + str(i + 1), fileFormat = "GeoTIFF")
+#     task.start()
+
+
+
+
+## Landsat 5
+col = ee.ImageCollection('LANDSAT/LT05/C01/T1_TOA')\
+        .filterDate('1990-03-01','1998-12-31')\
+        .filterBounds(region)
+
+count = col.size()
+print(count.getInfo())
+withCloudiness = col.map(algorithm = cloudscore)
+
+filteredCollection = withCloudiness.filter(ee.Filter.lt('cloud', 20))
 print(filteredCollection.size().getInfo())
 filteredCollection = filteredCollection.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6'])
 collectionList = filteredCollection.toList(col.size())
-collectionSize = collectionList.size().getInfo()
+collectionSize = filteredCollection.size().getInfo()
 print(collectionSize)
-for i in range(collectionSize):
-    task = ee.batch.Export.image.toDrive(
-        image = ee.Image(collectionList.get(i)).clip(region),
-        scale = 30, region = region.bounds().getInfo()['coordinates'], folder = "L8BayiGlacier01130116", fileNamePrefix = 'BayiL8' + str(i + 1))
-    task.start()
-
-## Landsat 7
-# col = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')\
-#         .filterDate('1999-01-01','2000-01-01')\
-#         .filterBounds(region)\
-#         .select(['B1','B2','B3','B4','B5','B6'])
-#         #.sort("CLOUD_COVER", False)
-# count = col.size()
-# print(count.getInfo())
-#
-#
-# collectionList = col.toList(col.size())
-# collectionSize = collectionList.size().getInfo()
-# print(collectionSize)
 # for i in range(collectionSize):
 #     task = ee.batch.Export.image.toDrive(
 #         image = ee.Image(collectionList.get(i)).clip(region),
-#         scale = 30, region = region.bounds().getInfo()['coordinates'], folder = "GEEtest", fileNamePrefix = 'imageL7' + str(i + 1))
-#     task.start()
-
-## Landsat 5
-# col = ee.ImageCollection('LANDSAT/LT05/C01/T1_SR')\
-#         .filterDate('1984-03-01','1998-12-31')\
-#         .filterBounds(region)\
-#         .select(['B1','B2','B3','B4','B5','B6'])
-#         #.sort("CLOUD_COVER", False)
-# count = col.size()
-#
-# collectionList = col.toList(col.size())
-# collectionSize = collectionList.size().getInfo()
-# print(collectionSize)
-# for i in range(collectionSize):
-#     task = ee.batch.Export.image.toDrive(
-#         image = ee.Image(collectionList.get(i)).clip(region),
-#         scale = 30, region = region.bounds().getInfo()['coordinates'], folder = "GEEtest", fileNamePrefix = 'imageL5' + str(i + 1))
+#         scale = 30, region = region.bounds().getInfo()['coordinates'],
+#         folder = "L5BayiGlacier8498", fileNamePrefix = 'BayiL5' + str(i + 1), fileFormat = "GeoTIFF")
 #     task.start()
