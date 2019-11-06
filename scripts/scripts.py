@@ -76,8 +76,8 @@ def read_wgms_gdf(wAfp, wAAfp, to_file=False, outp=None):
 
 def sjoin(glims_fp, wgms_fp, to_file=False, outp=None):
     '''Spatially join glims and wgms'''
-    glims_gdf = gpd.read_file(glims_fp)
-    wgms_gdf = gpd.read_file(wgms_fp)
+    glims_gdf = read_glims_gdf(glims_fp)
+    wgms_gdf = read_wgms_gdf(wgms_fp)
 
     joined = gpd.sjoin(wgms_gdf, glims_gdf, op='within')
 
@@ -91,7 +91,7 @@ def load_train_set(fp):
     try:
         return gpd.read_file(fp)
     except:
-        # download files, run previous code
+        # download files, run previous functions
         pass
 
 def query(id, fp):
