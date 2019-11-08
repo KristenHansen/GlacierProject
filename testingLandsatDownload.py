@@ -52,15 +52,15 @@ withCloudiness = col.map(algorithm = cloudscore)
 
 filteredCollection = withCloudiness.filter(ee.Filter.lt('cloud', 20))
 print(filteredCollection.size().getInfo())
-# filteredCollection = filteredCollection.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6'])
-# collectionList = filteredCollection.toList(col.size())
-# collectionSize = collectionList.size().getInfo()
+filteredCollection = filteredCollection.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6'])
+collectionList = filteredCollection.toList(col.size())
+collectionSize = collectionList.size().getInfo()
 # print(collectionSize)
-# for i in range(collectionSize):
-#     task = ee.batch.Export.image.toDrive(
-#         image = ee.Image(collectionList.get(i)).clip(region),
-#         scale = 30, region = region.bounds().getInfo()['coordinates'], folder = "L8BayiGlacier01130116", fileNamePrefix = 'BayiL8' + str(i + 1))
-#     task.start()
+for i in range(collectionSize):
+    task = ee.batch.Export.image.toDrive(
+        image = ee.Image(collectionList.get(i)).clip(region),
+        scale = 30, region = region.bounds().getInfo()['coordinates'], folder = "L8BayiGlacier01130116", fileNamePrefix = 'BayiL8' + str(i + 1))
+    task.start()
 
 # Landsat 7
 col2 = ee.ImageCollection('LANDSAT/LE07/C01/T1_TOA')
