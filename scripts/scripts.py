@@ -2,101 +2,140 @@ import pandas as pd
 import geopandas as gpd
 import fiona
 
-def open_glims_shp(fp, cols, to_file=False, outp=None):
-    '''Open glims shapefile'''
+def open_glims_shp(fp, usecols, outp=None, chunksize=50000):
+    '''
+    Open glims shapefile
+
+    :param fp: fp to glims_polygons.shp
+    :param usecols: columns to keep
+    :param outp: outpath
+    :param chunksize: chunksize for reading in shp file in fiona
+    '''
     file = fiona.open(fp)
 
     def records(usecols, r):
+        # read in shp file, keeping only cols in usecols
         source = file[r[0]: r[1]]
         for feature in source:
             f = {k: feature[k] for k in ['geometry']}
             f['properties'] = {k: feature['properties'][k] for k in usecols}
             yield f
     
+    # first df
     df = (
         gpd
         .GeoDataFrame
-        .from_features(records(cols, [0, 50000]))
+        .from_features(records(usecols, [0, chunksize]))
         .drop_duplicates('glac_id', keep='last')
     )
     
-    c = 50001
-    counter = 1
+    # append chunks, dropping duplicates, until last chunk
+    c = chunksize + 1
+    to_append = (
+        gpd.GeoDataFrame
+        .from_features(records(usecols, [c, c + chunksize - 1]))
+    )
 
-    while c != 900001:
-        print('Finished Job', c)
+    while len(to_append) == chunksize:
+        df = df.append(to_append, ignore_index=True).drop_duplicates('glac_id', keep='last')
+        c += chunksize
 
-        df = df.append(gpd.GeoDataFrame
-                .from_features(records(cols, [c, c + 49999])), ignore_index=True)
-                .drop_duplicates('glac_id', keep='last')
-        c += 50000
-    
+    # last chunk
     df = df.append(gpd.GeoDataFrame
-                .from_features(records(cols, [900001, None])), ignore_index=True)
+                .from_features(records(cols, [c, None])), ignore_index=True)
                 .drop_duplicates('glac_id', keep='last')
 
-    if to_file:
+    if outp:
+        df.crs = {'init' :'epsg:4326'}
         df.to_file(outp)
+    
+    return df
+
+def read_glims_gdf(fp, outp=None):
+    '''
+    Read in the glims shp file
+    :param fp: fp of either glims_gdf.shp or glims_polygons.shp
+    :param outp: outp of glims_gdf.shp if fp == glims_polygons.shp
+    '''
+    if outp:                                        
+        glims_gdf = open_glims_shp(fp, outp=outp)       # opens the raw shp file
     else:
-        return df
+        glims_gdf = gpd.read_file(fp)                   # reads in cleaned shp file
+    
+    return glims_gdf
 
-def read_glims_gdf(fp, to_file=False, outp=None):
-    '''Read in the glims shp file'''
-    glims_gdf = gpd.read_file(fp)
-    glims_gdf.crs = {'init' :'epsg:4326'}
+def read_wgms_gdf(wAfp, wAAfp, outp=None):
+    '''
+    Read in the wgms file as a gpd
+    :param wAfp: fp of wgms A
+    :param wAAfp: fp of wgms AA
+    :param outp: outp of wgms_gdf
+    '''
+    wgmsA = pd.read_csv(wAfp, encoding='latin1')        # wgms A df
+    wgmsAA = pd.read_csv(wAAfp, encoding='latin1')      # wgms AA df
+    clean_regex = '^UNNAMED .*|NO-.*'
 
-    if to_file:
-        glims_gdf.to_file(outp)
-    else:
-        return glims_gdf
-
-def read_wgms_gdf(wAfp, wAAfp, to_file=False, outp=None):
-    '''Read in the wgms file as a gpd'''
-    wgmsA = pd.read_csv(wAfp, encoding='latin1')
-    wgmsAA = pd.read_csv(wAAfp, encoding='latin1')
-
+    # select wanted columns from wgms A
     wantedA = 'POLITICAL_UNIT NAME WGMS_ID LATITUDE LONGITUDE PRIM_CLASSIFIC'.split()
-    wA = wgmsA.copy()[wantedA].replace('^UNNAMED .*|NO-.*', np.NaN,  regex=True)    # clean names
+    wA = wgmsA.copy()[wantedA].replace(clean_regex, np.NaN,  regex=True)    # clean names
 
+    # select wanted columns from wgms AA
     wantedAA = 'POLITICAL_UNIT NAME WGMS_ID GLIMS_ID'.split()
-    wAA = wgmsAA.copy()[wantedAA].replace('^UNNAMED .*|NO-.*', np.NaN,  regex=True) # clean names
+    wAA = wgmsAA.copy()[wantedAA].replace(clean_regex, np.NaN,  regex=True) # clean names
 
-    valley = wA.copy()[wA.PRIM_CLASSIFIC == 5]
+    valley = wA.copy()[wA.PRIM_CLASSIFIC == 5]                              # get valley glaciers
     wgms = valley.merge(wAA)
 
-    geometry = [Point(xy) for xy in zip(wgms.LONGITUDE, wgms.LATITUDE)]
-
+    geometry = [Point(xy) for xy in zip(wgms.LONGITUDE, wgms.LATITUDE)]     # convert to gdf
     wgms_gdf = wgms.drop(['LONGITUDE', 'LATITUDE'], axis=1)
     crs = {'init': 'epsg:4326'}
 
-    if to_file:
+    if outp:
         wgms_gdf.to_file(outp)
-    else:
-        return gpd.GeoDataFrame(wgms, crs=crs, geometry=geometry)
+    
+    return gpd.GeoDataFrame(wgms, crs=crs, geometry=geometry)
 
-def sjoin(glims_fp, wgms_fp, to_file=False, outp=None):
-    '''Spatially join glims and wgms'''
-    glims_gdf = read_glims_gdf(glims_fp)
-    wgms_gdf = read_wgms_gdf(wgms_fp)
+def sjoin(glims_gdf=None, wgms_gdf=None, glims_fp=None, wgms_fp = None, outp=None):
+    '''
+    Spatially join glims and wgms
+    :param glims_gdf: glims_gdf output from read_glims_gdf()
+    :param wgms_gdf: wgms_gdf output from read_wgms_gdf()
+    :param glims_fp: fp of glims_gdf
+    :param wgms_fp: fp of wgms_gdf
+    :param outp: outp of joined.shp
+    '''
+    # if input are filepaths not df objects
+    if glims_fp:
+        glims_gdf = read_glims_gdf(glims_fp)
+        wgms_gdf = read_wgms_gdf(wgms_fp)
 
-    joined = gpd.sjoin(wgms_gdf, glims_gdf, op='within')
+    joined = gpd.sjoin(wgms_gdf, glims_gdf, op='intersects')
 
-    if to_file:
+    if outp:
         joined.to_file(outp)
-    else:
-        return joined
+    
+    return joined
 
 def load_train_set(fp):
-    '''Load in training set for querying'''
+    '''
+    Load in training set for querying
+    :param fp: fp of joined.shp
+    '''
     try:
         return gpd.read_file(fp)
     except:
         # download files, run previous functions
         pass
 
-def query(id, fp):
-    '''Query info from given ID'''
-    glims_gdf = load_train_set(fp)
+def query(id, joined=None, fp=None):
+    '''
+    Query info from given ID
+    :param id: glims ID to query
+    :param joined: joined gdf
+    :param fp: fp of joined.shp
+    '''
+    if fp:
+        joined = load_train_set(fp)
     
     subset = glims_gdf[glims_gdf.glac_id == id]
     subset = (
@@ -106,3 +145,12 @@ def query(id, fp):
         .drop(columns=['anlys_time', 'geometry'])
     )
     return dict(subset.squeeze())
+
+if __name__ == '__main__':
+    glims_gdf = read_glims_gdf()                # load glims gdf
+    wgms_gdf = read_wgms_gdf()                  # load wgms gdf
+    joined = sjoin(glims_gdf, wgms_gdf)         # spatial join
+    glac_dict = query(id, joined)               # query ID info from joined
+
+
+
