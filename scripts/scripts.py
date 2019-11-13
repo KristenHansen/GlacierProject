@@ -4,7 +4,7 @@ import fiona
 
 def open_glims_shp(fp, usecols, outp=None, chunksize=50000):
     '''
-    Open glims shapefile
+    Open glims shapefile, keeping only most recent observations
 
     :param fp: fp to glims_polygons.shp
     :param usecols: columns to keep
@@ -14,7 +14,12 @@ def open_glims_shp(fp, usecols, outp=None, chunksize=50000):
     file = fiona.open(fp)
 
     def records(usecols, r):
-        # read in shp file, keeping only cols in usecols
+        ''' 
+        read in shp file, keeping only cols in usecols 
+
+        :param usecols: columns to keep
+        :param r: portions of file to open
+        '''
         source = file[r[0]: r[1]]
         for feature in source:
             f = {k: feature[k] for k in ['geometry']}
@@ -124,7 +129,9 @@ def load_train_set(fp):
     try:
         return gpd.read_file(fp)
     except:
-        # download files, run previous functions
+        glims_gdf = read_glims_gdf()                # load glims gdf
+        wgms_gdf = read_wgms_gdf()                  # load wgms gdf
+        joined = sjoin(glims_gdf, wgms_gdf)         # spatial join
         pass
 
 def query(id, joined=None, fp=None):
@@ -147,9 +154,9 @@ def query(id, joined=None, fp=None):
     return dict(subset.squeeze())
 
 if __name__ == '__main__':
-    glims_gdf = read_glims_gdf()                # load glims gdf
-    wgms_gdf = read_wgms_gdf()                  # load wgms gdf
-    joined = sjoin(glims_gdf, wgms_gdf)         # spatial join
+    # glims_gdf = read_glims_gdf()                # load glims gdf
+    # wgms_gdf = read_wgms_gdf()                  # load wgms gdf
+    # joined = sjoin(glims_gdf, wgms_gdf)         # spatial join
     glac_dict = query(id, joined)               # query ID info from joined
 
 
