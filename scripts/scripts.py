@@ -121,28 +121,29 @@ def sjoin(glims_gdf=None, wgms_gdf=None, glims_fp=None, wgms_fp = None, outp=Non
     
     return joined
 
-def load_train_set(fp):
+def load_train_set(fp, cols=['colnames']):
     '''
     Load in training set for querying
     :param fp: fp of joined.shp
+    :param cols: columns to load
     '''
     try:
-        return gpd.read_file(fp)
+        return gpd.read_file(fp)[cols]
     except:
         glims_gdf = read_glims_gdf()                # load glims gdf
         wgms_gdf = read_wgms_gdf()                  # load wgms gdf
         joined = sjoin(glims_gdf, wgms_gdf)         # spatial join
         pass
 
-def query(id, joined=None, fp=None):
+def query(id, cols=['colnames'], joined=None, fp=None):
     '''
     Query info from given ID
     :param id: glims ID to query
     :param joined: joined gdf
     :param fp: fp of joined.shp
+    :param cols: columns to load
     '''
-    if fp:
-        joined = load_train_set(fp)
+    joined = load_train_set(fp)[cols]
     
     subset = glims_gdf[glims_gdf.glac_id == id]
     subset = (
