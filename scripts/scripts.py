@@ -154,7 +154,8 @@ def query(glims_id, joined=None, fp=None):
     subset = joined[joined.glac_id == 'G222647E59132N']
     coords = list(zip(*np.asarray(subset.geometry.squeeze().exterior.coords.xy)))
     bbox = list(zip(*np.asarray(subset.envelope.squeeze().exterior.coords.xy)))
-    dct = dict(subset.drop(columns='geometry').squeeze())
+    to_drop = ['geometry', 'GLIMS_ID', 'LATITUDE', 'LONGITUDE', 'index_right', 'WGMS_ID', 'PRIM_CLASSIFIC']
+    dct = dict(subset.drop(columns=to_drop).squeeze())
     dct['coords'] = coords
     dct['bbox'] = bbox
     return dct
