@@ -130,7 +130,6 @@ def load_train_set(fp):
     '''
     Load in training set for querying
     :param fp: fp of joined.shp
-    :param cols: columns to load
     '''
     try:
         return gpd.read_file(fp)
@@ -138,20 +137,15 @@ def load_train_set(fp):
         glims_gdf = read_glims_gdf()                # load glims gdf
         wgms_gdf = read_wgms_gdf()                  # load wgms gdf
         joined = sjoin(glims_gdf, wgms_gdf)         # spatial join
-        pass
+        joined.to_file(fp)
+        return joined
 
-def query(glims_id, joined=None, fp=None):
+def query(glims_id, subset):
     '''
     Query info from given ID
     :param id: glims ID to query
-    :param joined: joined gdf
-    :param fp: fp of joined.shp
-    :param cols: columns to load
+    :param subset: subset of joined gdf
     '''
-    if fp:
-        joined = load_train_set(fp)
-    
-    subset = joined[joined.glac_id == 'G222647E59132N']
     coords = list(zip(*np.asarray(subset.geometry.squeeze().exterior.coords.xy)))
     bbox = list(zip(*np.asarray(subset.envelope.squeeze().exterior.coords.xy)))
     to_drop = ['geometry', 'GLIMS_ID', 'LATITUDE', 'LONGITUDE', 'index_right', 'WGMS_ID', 'PRIM_CLASSIFIC']
@@ -161,6 +155,7 @@ def query(glims_id, joined=None, fp=None):
     return dct
 
 if __name__ == '__main__':
+    # example
     glims_fp = 'data/glims_polys/glims_polys.shp'
     wA_fp = 'data/WGMS-FoG-2018-11-A-GLACIER.csv'
     wAA_fp = 'data/WGMS-FoG-2018-11-AA-GLACIER-ID-LUT.csv'
