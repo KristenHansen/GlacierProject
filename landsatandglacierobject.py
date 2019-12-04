@@ -1,5 +1,5 @@
 #Reorganize landsat download function
-def ee_download(glacierID, glacierObject, begDate = '1984-01-01', endDate = '2019-01-01', cloud_tol = 15, landsat = True, dem = True, outputObject = True):
+def ee_download(glacierID, glacierObject, begDate = '1984-01-01', endDate = '2019-01-01', cloud_tol = 20, landsat = True, dem = True):
     #Inner function for computing cloud score such that we can remove bad images from the landsat collections we download
     #Implementation in javascript can be found of Google Earth Engine website under (landsat algorithms), translation to python by KH
     #further help from Nicholas Clinton at https://gis.stackexchange.com/questions/252685/filter-landsat-images-base-on-cloud-cover-over-a-region-of-interest
@@ -36,6 +36,7 @@ def ee_download(glacierID, glacierObject, begDate = '1984-01-01', endDate = '201
     #Dummy request to Earth engine to compute glacier object values and send to toDrive
     #Creates image collections for later batch export
     #Landsat 8 image collection
+    print("Getting Landsat 8 collection")
     if date.fromisoformat(endDate) > date.fromisoformat("2013-01-01"):
         #First filter the collection of images by date and region of glacier
         # Landsat 8 starts on 01-01-13
@@ -58,6 +59,7 @@ def ee_download(glacierID, glacierObject, begDate = '1984-01-01', endDate = '201
         collectionSizeL8 = collectionListL8.size().getInfo()
         #Landsat 7 Image collection
         #Same for the other landsats based on dates of start
+    print("Getting Landsat 7 collection")
     if date.fromisoformat("1999-01-01") > date.fromisoformat(begDate):
         colL7 = ee.ImageCollection('LANDSAT/LE07/C01/T1_TOA')
         colL7 = colL7.filterDate(begDate,endDate)
@@ -78,6 +80,7 @@ def ee_download(glacierID, glacierObject, begDate = '1984-01-01', endDate = '201
     collectionListL7 = filteredCollectionL7.toList(colL7.size())
     collectionSizeL7 = filteredCollectionL7.size().getInfo()
     #Landsat 5 image collection
+    print("Getting landsat 5 collection")
     if date.fromisoformat(endDate) < date.fromisoformat('2012-05-01'):
         colL5 = ee.ImageCollection('LANDSAT/LT05/C01/T1_TOA')\
                 .filterDate(begDate,endDate)\
@@ -129,16 +132,10 @@ def ee_download(glacierID, glacierObject, begDate = '1984-01-01', endDate = '201
     glacierObject['L5Dates'] = L5Dates
     #The title of the folder where the glacier object and images will be located
     glacierObject['fileaddress'] = str(glacierObject['GlimsID'])
+    glacierObject['drivefile_id'] = str("NA")
 
     #CSV implementation for making the dictionary a csv and then writing it such that it can be used to push to drive location
     #Help found from code at: https://www.tutorialspoint.com/How-to-save-a-Python-Dictionary-to-CSV-file
-    print("Creating CSV")
-    csv_file = str(glacierObject['GlimsID']) + ".csv"
-    csv_columns = ['GlimsID', 'boundingbox','L8Dates','L7Dates','L5Dates', 'fileaddress']
-    with open(csv_file, "w") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames = csv_columns)
-        writer.writeheader()
-        writer.writerow(glacierObject)
 
     print("Making google drive glacier object")
     #Google Drive API implementation
@@ -166,24 +163,39 @@ def ee_download(glacierID, glacierObject, begDate = '1984-01-01', endDate = '201
     #operates on ID's found in metadata
     folderid = folder['id']
     print('Folder ID: %s' % folderid)
+    glacierObject["drivefile_id"] = str(folderid)
 
+    print("Creating CSV")
+    if os.path.exists("glacierInfo" + ".csv"):
+        with open('glacierInfo.csv','a') as f:
+            w = csv.DictWriter(f, glacierObject.keys())
+            if f.tell() == 0:
+                w.writeheader()
+                w.writerow(glacierObject)
+            else:
+                w.writerow(glacierObject)
+
+    else:
+        csv_file = "glacierInfo" + ".csv"
+        csv_columns = ['GlimsID', 'boundingbox','L8Dates','L7Dates','L5Dates', 'fileaddress', 'drivefile_id']
+        with open(csv_file, "w") as f:
+            writer = csv.writer(f)
+            writer.writerow(glacierObject)
+
+    #No longer need the following  until all glaciers are run
     #Now that we created the folder we must create the file that will store the glacier object using the csv created above
     # Then upload to drive
-    file = drive.CreateFile({"parents": [{"kind": "drive#fileLink", "id": folderid}]})
-    file.SetContentFile(str(glacierID) + ".csv")
-    file.Upload()
+    # file = drive.CreateFile({"parents": [{"kind": "drive#fileLink", "id": folderid}]})
+    # file.SetContentFile(str(glacierID) + ".csv")
+    # file.Upload()
 
     #file=drive.CreateFile(glacierObject)
     #file.SetContentFile(str(glacierID) + ".csv")
     #file.Upload()
 
-    #Delete the csv that was written to disk, and print the file does not exist if it doesn't
-    #Then we will know that and know that the glacier object was not correctly created
-    if os.path.exists(str(glacierID) + ".csv"):
-        os.remove(str(glacierID) + ".csv")
-    else:
-        print("The file does not exist")
+
     print("glacier object uploaded to google drive")
+
 
     #Now is the part behind the GEE server
     #First the DEM
@@ -198,7 +210,7 @@ def ee_download(glacierID, glacierObject, begDate = '1984-01-01', endDate = '201
         task.start()
         print("dem sent to drive")
     if landsat == True:
-        #We already created the image collections previously and now in a for loop we 
+        #We already created the image collections previously and now in a for loop we
         #batch export the images from the collections with the date as the name
         #similarly for each of the three landsat collections
         for i in range(collectionSizeL8):
@@ -229,7 +241,44 @@ def ee_download(glacierID, glacierObject, begDate = '1984-01-01', endDate = '201
         print(collectionSizeL5)
         print("L5 images sent to drive")
 
+#Retrieve images from google drive using file id from previous function
+#First have to upload to csv to read and then get file id from csv
+def retrieve_images(glimsID):
+    import pandas as pd
+    from pydrive.auth import GoogleAuth
+    from pydrive.drive import GoogleDrive
+    import os
+
+    g_login = GoogleAuth()
+    g_login.LocalWebserverAuth()
+    drive = GoogleDrive(g_login)
+
+    data = pd.read_csv("glacierInfo.csv")
+    object = data.loc[data['GlimsID'] == glimsID]
+    # folder_id = object['drivefile_id']
+    # file_list = drive.ListFile(
+    #     {'q': "folder_id in parents"}).GetList()  # use your own folder ID here
+    #
+    #
+    # for f in file_list:
+    #     # 3. Create & download by id.
+    #     print('title: %s, id: %s' % (f['title'], f['id']))
+    #     fname = f['title']
+    #     print('downloading to {}'.format(fname))
+    #     f_ = drive.CreateFile({'id': f['id']})
+    #     f_.GetContentFile(fname)
+
+    #Make a zip file instead and then download
+
+
 dct = dict()
 dct['GlimsID'] = "G098570E39226N"
 dct['boundingbox'] = [[98.54723199999999, 39.210651], [98.59022299999999, 39.210651], [98.59022299999999, 39.243147], [98.54723199999999, 39.243147], [98.54723199999999, 39.210651]]
-ee_download("G098570E39226N", dct, cloud_tol = 20, landsat = True, dem = True)
+#ee_download("G098570E39226N", dct, cloud_tol = 20, landsat = False, dem = False, begDate = "2000-01-01", endDate = "2014-01-01")
+#print(dct.items())
+retrieve_images("G098570E39226N")
+
+#McCall Glacier
+# dct['GlimsID'] = "G216152E69302N"
+# dct['boundingbox'] = [[-143.860976, 69.276937],[-143.779992, 69.276937],[-143.779992, 69.334028],[-143.860976, 69.334028]]
+# ee_download("G216152E69302N", dct, cloud_tol = 20, landsat = False, dem = True)
