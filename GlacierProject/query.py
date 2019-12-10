@@ -151,10 +151,11 @@ def id_query(glims_id, subset):
     :param id: glims ID to query
     :param subset: subset of joined gdf
     '''
-    coords = list(zip(*np.asarray(subset.geometry.squeeze().exterior.coords.xy)))
-    bbox = list(zip(*np.asarray(subset.envelope.squeeze().exterior.coords.xy)))
+    subs = subset[subset.glac_id == glims_id]
+    coords = list(zip(*np.asarray(subs.geometry.squeeze().exterior.coords.xy)))
+    bbox = list(zip(*np.asarray(subs.envelope.squeeze().exterior.coords.xy)))
     to_drop = ['geometry', 'GLIMS_ID', 'LATITUDE', 'LONGITUDE', 'index_right', 'WGMS_ID', 'PRIM_CLASSIFIC']
-    dct = dict(subset.drop(columns=to_drop).squeeze())
+    dct = dict(subs.drop(columns=to_drop).squeeze())
     dct['coords'] = coords
     dct['bbox'] = bbox
     return dct

@@ -1,4 +1,5 @@
 from GlacierProject.query import *
+from GlacierProject.gee import *
 
 def prep_joined(glimsid_list, datadir):
 	'''
@@ -6,7 +7,7 @@ def prep_joined(glimsid_list, datadir):
 	:param glimsid_list: list of GLIMS IDs to query
 	:param datadir: data directory
 	'''
-	joined = load_train_set(datadir + '/joined/joined.shp')
+	joined = load_train_set(datadir + 'joined/joined.shp')
 	return joined[joined.glac_id.isin(glimsid_list)]
 
 def single_glacier(glims_id, subset):
@@ -17,6 +18,8 @@ def single_glacier(glims_id, subset):
 	:param subset: subset training set from prep_joined
 	'''
 	queried = id_query(glims_id, subset)
+	ee_download(glims_id, queried, landsat=False, dem=False, begDate='2000-01-01', endDate='2014-01-01')
+	retrieve_images(glims_id)
 	# sends init req to GEE for metadata
 	# creates drive location, adds metadata
 	# sends request to GEE
@@ -30,9 +33,3 @@ def run_pipeline(glimsid_list, datadir):
 	train_set = prep_joined(glimsid_list, datadir)
 	for glims_id in glimsid_list:
 		single_glacier(glims_id, train_set)
-
-def test(t1):
-	'''
-	Testing for argparse import
-	'''
-	print(t1)

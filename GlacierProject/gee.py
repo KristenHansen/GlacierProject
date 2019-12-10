@@ -1,11 +1,11 @@
-from datetime import date
 import csv
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
 import os
 import sys
 import ee
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 import pandas as pd
+from datetime import date
 
 #Reorganize landsat download function
 def ee_download(
@@ -31,7 +31,7 @@ def ee_download(
     except:
         print("Unexpected error:", sys.exc_info()[0])
         raise
-    
+
     def cloudscore(image):
         '''
         Inner function for computing cloud score such that we can remove 
@@ -51,7 +51,7 @@ def ee_download(
     # Our glacier region can be found in the imported dictionary as an 
     # argument under bounding box (list of lists of coordinates).
     # We must create a gee polygon in order to use that to clip the images
-    region = ee.Geometry.Polygon(glacierObject['boundingbox'])
+    region = ee.Geometry.Polygon(glacierObject['bbox'])
     # Dummy request to Earth engine to compute glacier object values and send to toDrive
     # Creates image collections for later batch export
     # Landsat 8 image collection
@@ -67,7 +67,7 @@ def ee_download(
 
         # Filter out cloudiest images based on tolerance set as parameter
         # We need bands 1-6
-        withCloudiness = colL8.map(algorithm = cloudscore)
+        withCloudiness = colL8.map(algorithm=cloudscore)
 
         filteredCollectionL8 = withCloudiness.filter(ee.Filter.lt('cloud', cloud_tol))
         filteredCollectionL8 = filteredCollectionL8.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6'])
@@ -93,7 +93,7 @@ def ee_download(
         colL7 = colL7.filterBounds(region)
         count = colL7.size()
 
-    withCloudiness = colL7.map(algorithm = cloudscore)
+    withCloudiness = colL7.map(algorithm=cloudscore)
 
     filteredCollectionL7 = withCloudiness.filter(ee.Filter.lt('cloud', cloud_tol))
     filteredCollectionL7 = filteredCollectionL7.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6_VCID_1'])
@@ -116,7 +116,7 @@ def ee_download(
 
         count = colL5.size()
 
-    withCloudiness = colL5.map(algorithm = cloudscore)
+    withCloudiness = colL5.map(algorithm=cloudscore)
 
     filteredCollectionL5 = withCloudiness.filter(ee.Filter.lt('cloud', cloud_tol))
     filteredCollectionL5 = filteredCollectionL5.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6'])
@@ -153,7 +153,7 @@ def ee_download(
     glacierObject['L7Dates'] = L7Dates
     glacierObject['L5Dates'] = L5Dates
     # The title of the folder where the glacier object and images will be located
-    glacierObject['fileaddress'] = str(glacierObject['GlimsID'])
+    glacierObject['fileaddress'] = str(glacierObject['glac_id'])
     glacierObject['drivefile_id'] = str("NA")
 
     # CSV implementation for making the dictionary a csv and then writing it 
@@ -174,10 +174,10 @@ def ee_download(
     # Helpful links:
     # https://github.com/gsuitedevs/PyDrive/issues/72
     # https://towardsdatascience.com/how-to-manage-files-in-google-drive-with-python-d26471d91ecd
-    nameforfile = str(glacierObject['GlimsID']) + ".csv"
+    nameforfile = str(glacierObject['glac_id']) + ".csv"
     # Assign mime type such that it creates a file in drive
     folder_metadata = {
-    'title': str(glacierObject['GlimsID']),
+    'title': str(glacierObject['glac_id']),
     'mimeType': 'application/vnd.google-apps.folder'
     }
     folder = drive.CreateFile(folder_metadata)
@@ -201,7 +201,7 @@ def ee_download(
 
     else:
         csv_file = "glacierInfo" + ".csv"
-        csv_columns = ['GlimsID', 'boundingbox','L8Dates','L7Dates','L5Dates', 'fileaddress', 'drivefile_id']
+        csv_columns = ['GlimsID', 'bbox','L8Dates','L7Dates','L5Dates', 'fileaddress', 'drivefile_id']
         with open(csv_file, "w") as f:
             writer = csv.writer(f)
             writer.writerow(glacierObject)
@@ -231,7 +231,10 @@ def ee_download(
         #  export this image to drive in the glimsID folder specified in input object
         task = ee.batch.Export.image.toDrive(
             image = DEM.clip(region),
-            scale = 30, region = region.bounds().getInfo()['coordinates'], folder = str(glacierObject['GlimsID']), fileNamePrefix = 'USGS_DEM')
+            scale = 30,
+            region = region.bounds().getInfo()['coordinates'],
+            folder = str(glacierObject['glac_id']),
+            fileNamePrefix = 'USGS_DEM')
         task.start()
         print("dem sent to drive")
     if landsat == True:
@@ -242,8 +245,11 @@ def ee_download(
             image = ee.Image(collectionListL8.get(i)).clip(region)
             filename = image.get("DATE_ACQUIRED")
             task = ee.batch.Export.image.toDrive(
-                image = ee.Image(collectionListL8.get(i)).clip(region),
-                scale = 30, region = region.bounds().getInfo()['coordinates'], folder = str(glacierObject['GlimsID']), fileNamePrefix = str(filename.getInfo()))
+                image=ee.Image(collectionListL8.get(i)).clip(region),
+                scale=30,
+                region=region.bounds().getInfo()['coordinates'], 
+                folder=str(glacierObject['glac_id']),
+                fileNamePrefix=str(filename.getInfo()))
             task.start()
         print(collectionSizeL8)
         print("L8 images sent to drive")
@@ -251,8 +257,11 @@ def ee_download(
             image = ee.Image(collectionListL7.get(i)).clip(region)
             filename = image.get("DATE_ACQUIRED")
             task = ee.batch.Export.image.toDrive(
-                image = ee.Image(collectionListL7.get(i)).clip(region),
-                scale = 30, region = region.bounds().getInfo()['coordinates'], folder = str(glacierObject['GlimsID']), fileNamePrefix = str(filename.getInfo()))
+                image=ee.Image(collectionListL7.get(i)).clip(region),
+                scale=30,
+                region=region.bounds().getInfo()['coordinates'],
+                folder=str(glacierObject['glac_id']),
+                fileNamePrefix=str(filename.getInfo()))
             task.start()
         print(collectionSizeL7)
         print("L7 images sent to drive")
@@ -260,21 +269,24 @@ def ee_download(
             image = ee.Image(collectionListL5.get(i)).clip(region)
             filename = image.get("DATE_ACQUIRED")
             task = ee.batch.Export.image.toDrive(
-                image = ee.Image(collectionListL5.get(i)).clip(region),
-                scale = 30, region = region.bounds().getInfo()['coordinates'], folder = str(glacierObject['GlimsID']), fileNamePrefix = str(filename.getInfo()))
+                image=ee.Image(collectionListL5.get(i)).clip(region),
+                scale=30,
+                region=region.bounds().getInfo()['coordinates'],
+                folder=str(glacierObject['glac_id']),
+                fileNamePrefix=str(filename.getInfo()))
             task.start()
         print(collectionSizeL5)
         print("L5 images sent to drive")
 
 # Retrieve images from google drive using file id from previous function
 # First have to upload to csv to read and then get file id from csv
-def retrieve_images(glimsID):
+def retrieve_images(glims_id):
     g_login = GoogleAuth()
     g_login.LocalWebserverAuth()
     drive = GoogleDrive(g_login)
 
     data = pd.read_csv("glacierInfo.csv")
-    object = data.loc[data['GlimsID'] == glimsID]
+    object = data.loc[data['glac_id'] == glims_id]
     # folder_id = object['drivefile_id']
     # file_list = drive.ListFile(
     #     {'q': "folder_id in parents"}).GetList()  # use your own folder ID here
@@ -288,17 +300,21 @@ def retrieve_images(glimsID):
     #     f_ = drive.CreateFile({'id': f['id']})
     #     f_.GetContentFile(fname)
 
-    #Make a zip file instead and then download
+    # Make a zip file instead and then download
 
 if __name__ == '__main__':
     dct = dict()
-    dct['GlimsID'] = "G098570E39226N"
-    dct['boundingbox'] = [[98.54723199999999, 39.210651], [98.59022299999999, 39.210651], [98.59022299999999, 39.243147], [98.54723199999999, 39.243147], [98.54723199999999, 39.210651]]
+    dct['glac_id'] = "G098570E39226N"
+    dct['bbox'] = [[98.54723199999999, 39.210651], 
+                          [98.59022299999999, 39.210651], 
+                          [98.59022299999999, 39.243147], 
+                          [98.54723199999999, 39.243147], 
+                          [98.54723199999999, 39.210651]]
     # ee_download("G098570E39226N", dct, cloud_tol = 20, landsat = False, dem = False, begDate = "2000-01-01", endDate = "2014-01-01")
     # print(dct.items())
     retrieve_images("G098570E39226N")
 
     # McCall Glacier
-    # dct['GlimsID'] = "G216152E69302N"
-    # dct['boundingbox'] = [[-143.860976, 69.276937],[-143.779992, 69.276937],[-143.779992, 69.334028],[-143.860976, 69.334028]]
+    # dct['glac_id'] = "G216152E69302N"
+    # dct['bbox'] = [[-143.860976, 69.276937],[-143.779992, 69.276937],[-143.779992, 69.334028],[-143.860976, 69.334028]]
     # ee_download("G216152E69302N", dct, cloud_tol = 20, landsat = False, dem = True)
