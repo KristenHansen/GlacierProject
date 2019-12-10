@@ -7,12 +7,12 @@ with open('requirements.txt') as fid:
 
 
 setup(
-    name = 'babypandas',
-    packages = ['babypandas'],
+    name = 'GlacierProject',
+    packages = ['GlacierProject'],
     version = '0.1.0',
     install_requires = install_requires,
-    description = 'A restricted Pandas API',
-    author = 'Aaron Fraenkel, Darren Liu',
+    description = 'Researching and predicting glacier recession',
+    author = 'Darren Liu',
     author_email = '',
-    url = 'https://github.com/afraenkel/babypandas'
+    scripts = ['scripts/glacier.py']
 )
