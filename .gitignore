@@ -8,7 +8,12 @@ GlacierProject.egg-info/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-# *.ipynb
+*.ipynb
 
 # data
 data/*
+!data/.gitkeep 
+
+# misc
+*.csv
+client_secrets.json

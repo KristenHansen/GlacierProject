@@ -18,8 +18,7 @@ def single_glacier(glims_id, subset):
 	:param subset: subset training set from prep_joined
 	'''
 	queried = id_query(glims_id, subset)
-	ee_download(glims_id, queried, landsat=False, dem=False, begDate='2000-01-01', endDate='2014-01-01')
-	retrieve_images(glims_id)
+	ee_download(glims_id, queried, landsat=True, dem=True, begDate='2000-01-01', endDate='2014-01-01')
 	# sends init req to GEE for metadata
 	# creates drive location, adds metadata
 	# sends request to GEE

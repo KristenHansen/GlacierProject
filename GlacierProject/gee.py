@@ -162,7 +162,8 @@ def ee_download(
 
     print("Making google drive glacier object")
     # Google Drive API implementation
-    # Getting google drive API to work found at: https://medium.com/@annissouames99/how-to-upload-files-automatically-to-drive-with-python-ee19bb13dda
+    # Getting google drive API to work found at: 
+    # https://medium.com/@annissouames99/how-to-upload-files-automatically-to-drive-with-python-ee19bb13dda
     # Uploading files code found at: https://developers.google.com/drive/api/v3/manage-uploads
     # However that is where the help from developers group stopped helping, 
     # do not use it for creating folders and such, their solutions don't work with python API
@@ -206,7 +207,7 @@ def ee_download(
             writer = csv.writer(f)
             writer.writerow(glacierObject)
 
-    # No longer need the following  until all glaciers are run
+    # No longer need the following until all glaciers are run
     # Now that we created the folder we must create the file that will 
     # store the glacier object using the csv created above
     # Then upload to drive
@@ -218,9 +219,7 @@ def ee_download(
     # file.SetContentFile(str(glacierID) + ".csv")
     # file.Upload()
 
-
     print("glacier object uploaded to google drive")
-
 
     # Now is the part behind the GEE server
     # First the DEM
@@ -276,7 +275,7 @@ def ee_download(
                 fileNamePrefix=str(filename.getInfo()))
             task.start()
         print(collectionSizeL5)
-        print("L5 images sent to drive")
+        print("L5 images sent to drive")    
 
 # Retrieve images from google drive using file id from previous function
 # First have to upload to csv to read and then get file id from csv

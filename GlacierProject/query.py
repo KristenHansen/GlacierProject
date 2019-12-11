@@ -141,6 +141,7 @@ def load_train_set(fp):
         # glims_gdf = read_glims_gdf()                # load glims gdf
         # wgms_gdf = read_wgms_gdf()                  # load wgms gdf
         # joined = sjoin(glims_gdf, wgms_gdf)         # spatial join
+        # os.mkdir('../data/joined')
         # joined.to_file(fp)
         # return joined
         return
@@ -154,7 +155,7 @@ def id_query(glims_id, subset):
     subs = subset[subset.glac_id == glims_id]
     coords = list(zip(*np.asarray(subs.geometry.squeeze().exterior.coords.xy)))
     bbox = list(zip(*np.asarray(subs.envelope.squeeze().exterior.coords.xy)))
-    to_drop = ['geometry', 'GLIMS_ID', 'LATITUDE', 'LONGITUDE', 'index_right', 'WGMS_ID', 'PRIM_CLASSIFIC']
+    to_drop = ['geometry', 'GLIMS_ID', 'LATITUDE', 'LONGITUDE', 'WGMS_ID']
     dct = dict(subs.drop(columns=to_drop).squeeze())
     dct['coords'] = coords
     dct['bbox'] = bbox
