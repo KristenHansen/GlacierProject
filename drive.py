@@ -19,7 +19,7 @@ SCOPES = 'https://www.googleapis.com/auth/drive'
 PARENT_FOLDER_NAME = 'Fraenkel_Test'
 
 # ---------------------------------------------------------------------
-# 
+#
 # ---------------------------------------------------------------------
 
 
@@ -60,7 +60,7 @@ def query_from_drive(service, query, page_token):
     return resp
 
 
-def get_parent_folder(service, name=PARENT_FOLDER_NAME):
+def get_parent_folder_id(service, name=PARENT_FOLDER_NAME):
     '''
     Obtain the parent folder ID from the name.
     '''
@@ -69,6 +69,23 @@ def get_parent_folder(service, name=PARENT_FOLDER_NAME):
     files = resp.get('files', [])
     matches = {f.get('name'): f.get('id') for f in files}
     return matches[name]
+
+
+def create_folder(service, folder_name, parentID=None):
+    '''
+    Create a folder in drive with `folder_name`. If parentID is given,
+    create the folder in the folder with id=ParentID. Returns the id
+    of the newly created folder.
+    '''
+    # Create a folder on Drive, returns the newely created folders ID
+    body = {
+        'name': folder_name,
+        'mimeType': "application/vnd.google-apps.folder"
+    }
+    if parentID:
+        body['parents'] = [parentID]
+    root_folder = service.files().create(body=body).execute()
+    return root_folder['id']
 
 
 def get_folder_ids(service, parent_id, glims_ids=None):
