@@ -17,3 +17,4 @@ data/*
 # misc
 *.csv
 client_secrets.json
+archive.py

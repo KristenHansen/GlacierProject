@@ -1,5 +1,17 @@
 from GlacierProject.query import *
 from GlacierProject.gee import *
+import threading
+from multiprocessing.dummy import Pool as ThreadPool
+
+def authenticate():
+	# Earth Engine authentication
+	try:
+		ee.Initialize()
+		print('The Earth Engine package initialized successfully!')
+	except ee.EEException:
+		print('The Earth Engine package failed to initialize!')
+
+	# Google Drive API authentication
 
 def prep_joined(glimsid_list, datadir):
 	'''
@@ -10,7 +22,14 @@ def prep_joined(glimsid_list, datadir):
 	joined = load_train_set(datadir + 'joined/joined.shp')
 	return joined[joined.glac_id.isin(glimsid_list)]
 
-def single_glacier(glims_id, subset):
+def single_glacier(
+	glims_id, 
+	subset, 
+	begDate='1984-01-01', 
+    endDate='2019-01-01', 
+    cloud_tol=20, 
+    landsat=True, 
+    dem=True):
 	'''
 	Queries a dictionary of glacier data, requests data
 	from GEE
@@ -23,12 +42,22 @@ def single_glacier(glims_id, subset):
 	# creates drive location, adds metadata
 	# sends request to GEE
 
-def run_pipeline(glimsid_list, datadir):
+def run_pipeline(glims_id_input, datadir, delim=None):
 	'''
 	Runs the data extraction pipeline
-	:param glimsid_list: GLIMS IDs to pass through pipeline
+	:param glims_id_input: GLIMS IDs to pass through pipeline; either python list or text filepath
 	:param datadir: data directory
+	:param delim: delimiter to split on if glims_id_input is a text file
 	'''
-	train_set = prep_joined(glimsid_list, datadir)
-	for glims_id in glimsid_list:
-		single_glacier(glims_id, train_set)
+	# TODO: authenticate first
+
+	if delim:
+		# read in list from text file
+		with open(glims_id_input) as fh:
+			ids_list = fh.read().split(delim)
+	else:
+		ids_list = glims_id_input
+
+	train_set = prep_joined(ids_list, datadir)
+	pool = ThreadPool(2)
+	pool.map(lambda glims_id: single_glacier(glims_id, train_set), ids_list)

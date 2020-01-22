@@ -1,23 +1,69 @@
+'''
+TODO: query.py does _________________-
+'''
+
 import pandas as pd
 import numpy as np
 import geopandas as gpd
 import fiona
 from shapely.geometry import Point
 
+def read_glims(fp, cols, outp=None, chunksize=50000):
+    '''
+    Open glims shapefile, keeping only most recent observations
+
+    :param fp: filepath to glims_polygons.shp
+    :param cols: columns to keep
+    :param outp: output filepath
+    :param chunksize: chunksize for reading in shapefile in fiona
+    '''
+
+    file = fiona.open(fp)
+    
+    def reader(file, cols, chunksize):
+        ''' 
+        Read in shapefile, keeping only columns in usecols 
+
+        :param cols: columns to keep
+        :param r: portions of file to open
+        '''
+        out = []
+        for k, feature in enumerate(file):
+            if (k + 1) % chunksize:
+                f = {k: feature[k] for k in ['geometry']}
+                f['properties'] = {k: feature['properties'][k] for k in cols}
+                out.append(f)
+            else:
+                yield gpd.GeoDataFrame.from_features(out).drop_duplicates('glac_id', keep='last')
+                out = []
+                
+    for chunk in reader(file, cols, chunksize):
+        try:
+            glims = glims.append(chunk, ignore_index=True)
+        except NameError:
+            glims = chunk
+    
+    glims.crs = {'init' :'epsg:4326'}
+
+    if outp:
+        glims.to_file(outp)
+    
+    return glims
+
 def open_glims_shp(fp, usecols, outp=None, chunksize=50000):
     '''
     Open glims shapefile, keeping only most recent observations
 
-    :param fp: fp to glims_polygons.shp
+    :param fp: filepath to glims_polygons.shp
     :param usecols: columns to keep
-    :param outp: outpath
-    :param chunksize: chunksize for reading in shp file in fiona
+    :param outp: output filepath
+    :param chunksize: chunksize for reading in shapefile in fiona
     '''
     file = fiona.open(fp)
 
     def records(usecols, r):
         ''' 
-        read in shp file, keeping only cols in usecols 
+        Read in shapefile, keeping only columns in usecols 
 
         :param usecols: columns to keep
         :param r: portions of file to open
@@ -62,59 +108,49 @@ def open_glims_shp(fp, usecols, outp=None, chunksize=50000):
 
 def read_glims_gdf(fp, usecols=None, outp=None):
     '''
-    Read in the glims shp file
-    :param fp: fp of either glims_gdf.shp or glims_polygons.shp
-    :param outp: outp of glims_gdf.shp if fp == glims_polygons.shp
+    Read in the glims shapefile
+    :param fp: filepath of either glims_gdf.shp or glims_polygons.shp
+    :param outp: outut filepath of glims_gdf.shp if fp == glims_polygons.shp
     '''
     if outp:                                        
         glims_gdf = open_glims_shp(fp, usecols, outp=outp)       # opens the raw shp file
     else:
-        glims_gdf = gpd.read_file(fp)                   # reads in cleaned shp file
+        glims_gdf = gpd.read_file(fp)                            # reads in cleaned shp file
         glims_gdf.crs = {'init' :'epsg:4326'}
     
     return glims_gdf
 
-def read_wgms_gdf(wAfp, wAAfp, outp=None):
+def read_wgms_gdf(*filepaths, outp=None):
     '''
-    Read in the wgms file as a gpd
-    :param wAfp: fp of wgms A
-    :param wAAfp: fp of wgms AA
-    :param outp: outp of wgms_gdf
+    Read in the wgms file as a GeoDataFrame
+    :param filepaths: filepaths of wanted wgms datasets
+    :param outp: output filepath of wgms_gdf
     '''
-    wgmsA = pd.read_csv(wAfp, encoding='latin1')        # wgms A df
-    wgmsAA = pd.read_csv(wAAfp, encoding='latin1')      # wgms AA df
-    clean_regex = '^UNNAMED .*|NO-.*'
-
-    # select wanted columns from wgms A
-    wantedA = 'POLITICAL_UNIT NAME WGMS_ID LATITUDE LONGITUDE PRIM_CLASSIFIC'.split()
-    wA = wgmsA.copy()[wantedA].replace(clean_regex, np.NaN,  regex=True)    # clean names
-
-    # select wanted columns from wgms AA
-    wantedAA = 'POLITICAL_UNIT NAME WGMS_ID GLIMS_ID'.split()
-    wAA = wgmsAA.copy()[wantedAA].replace(clean_regex, np.NaN,  regex=True) # clean names
-
-    valley = wA.copy()[wA.PRIM_CLASSIFIC == 5]                              # get valley glaciers
-    wgms = valley.merge(wAA)
-
-    geometry = [Point(xy) for xy in zip(wgms.LONGITUDE, wgms.LATITUDE)]     # convert to gdf
-    wgms_gdf = wgms.drop(['LONGITUDE', 'LATITUDE'], axis=1)
+    for f in filepaths:
+        df = pd.read_csv(f, encoding='latin1')
+        try:
+            wgms = wgms.merge(df)
+        except NameError:
+            wgms = df
+            
+    geometry = [Point(xy) for xy in zip(wgms['LONGITUDE'], wgms['LATITUDE'])]
     crs = {'init': 'epsg:4326'}
-    
+
     wgms_gdf = gpd.GeoDataFrame(wgms, crs=crs, geometry=geometry)
 
     if outp:
         wgms_gdf.to_file(outp)
-    
+
     return wgms_gdf
 
 def sjoin(glims_gdf=None, wgms_gdf=None, glims_fp=None, wgms_fp = None, outp=None):
     '''
-    Spatially join glims and wgms
+    Spatially join glims and wgms datasets
     :param glims_gdf: glims_gdf output from read_glims_gdf()
     :param wgms_gdf: wgms_gdf output from read_wgms_gdf()
-    :param glims_fp: fp of glims_gdf
-    :param wgms_fp: list fps for wgms_gdf (wA and wAA)
-    :param outp: outp of joined.shp
+    :param glims_fp: filepath of glims_gdf
+    :param wgms_fp: list filepaths for wgms_gdf (wA and wAA)
+    :param outp: output filepath of joined.shp
     '''
     # if input are filepaths not df objects
     if glims_fp:
@@ -132,7 +168,7 @@ def sjoin(glims_gdf=None, wgms_gdf=None, glims_fp=None, wgms_fp = None, outp=Non
 def load_train_set(fp):
     '''
     Load in training set for querying
-    :param fp: fp of joined.shp
+    :param fp: filepath of joined.shp
     '''
     try:
         return gpd.read_file(fp)
@@ -150,7 +186,7 @@ def id_query(glims_id, subset):
     '''
     Query info from given ID
     :param id: glims ID to query
-    :param subset: subset of joined gdf
+    :param subset: subset of joined GeoDataFrame
     '''
     subs = subset[subset.glac_id == glims_id]
     coords = list(zip(*np.asarray(subs.geometry.squeeze().exterior.coords.xy)))

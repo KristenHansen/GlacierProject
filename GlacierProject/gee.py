@@ -15,22 +15,21 @@ def ee_download(
     endDate='2019-01-01', 
     cloud_tol=20, 
     landsat=True, 
-    dem=True
-    ):
+    dem=True):
     '''
     Download images from GEE
     '''
     # Initial earth engine connection, key much be on your computer, thus 
     # you must once in terminal run ee.Authenticate() for any new computer 
     # that you are using for implementation of this google earth engine communication
-    try:
-        ee.Initialize()
-        print('The Earth Engine package initialized successfully!')
-    except ee.EEException:
-        print('The Earth Engine package failed to initialize!')
-    except:
-        print("Unexpected error:", sys.exc_info()[0])
-        raise
+    # try:
+    #     ee.Initialize()
+    #     print('The Earth Engine package initialized successfully!')
+    # except ee.EEException:
+    #     print('The Earth Engine package failed to initialize!')
+    # except: 
+    #     # Already initialized
+    #     pass
 
     def cloudscore(image):
         '''
