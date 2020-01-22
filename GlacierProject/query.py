@@ -8,17 +8,19 @@ import geopandas as gpd
 import fiona
 from shapely.geometry import Point
 
-def open_glims_shp(fp, cols, outp=None, chunksize=50000):
+def open_glims_shp(poly_fp, pt_fp, cols, outp=None, chunksize=50000):
     '''
     Open glims shapefile, keeping only most recent observations
 
-    :param fp: filepath to glims_polygons.shp
+    :param poly_fp: filepath to glims_polygons.shp
+    :param pt_fp: filepath to glims_points.shp
     :param cols: columns to keep
     :param outp: output filepath
     :param chunksize: chunksize for reading in shapefile in fiona
     '''
 
-    file = fiona.open(fp)
+    # Read in polygon file
+    file = fiona.open(poly_fp)
     
     def reader(file, cols, chunksize):
         ''' 
@@ -45,19 +47,26 @@ def open_glims_shp(fp, cols, outp=None, chunksize=50000):
     
     glims.crs = {'init' :'epsg:4326'}
 
+    # Read in point file and merge
+
+    pts =  gpd.read_file(pt_fp)
+    pts['point'] = pts['geometry']
+    pts_tomerge = pts[['glacier_id', 'point']].rename(columns={'glacier_id': 'glac_id'})
+    glims = glims.merge(pts_tomerge)
+
     if outp:
         glims.to_file(outp)
     
     return glims
 
-def read_glims_gdf(fp, usecols=None, outp=None):
+def read_glims_gdf(fp, usecols=None, pt_fp=None, outp=None):
     '''
     Read in the glims shapefile
     :param fp: filepath of either glims_gdf.shp or glims_polygons.shp
     :param outp: outut filepath of glims_gdf.shp if fp == glims_polygons.shp
     '''
     if outp:                                        
-        glims_gdf = open_glims_shp(fp, usecols, outp=outp)       # opens the raw shp file
+        glims_gdf = open_glims_shp(fp, pt_fp, usecols, outp=outp)       # opens the raw shp file
     else:
         glims_gdf = gpd.read_file(fp)                            # reads in cleaned shp file
         glims_gdf.crs = {'init' :'epsg:4326'}
@@ -135,10 +144,12 @@ def id_query(glims_id, subset):
     subs = subset[subset.glac_id == glims_id]
     coords = list(zip(*np.asarray(subs.geometry.squeeze().exterior.coords.xy)))
     bbox = list(zip(*np.asarray(subs.envelope.squeeze().exterior.coords.xy)))
+    point = subs.point.squeeze()
     to_drop = ['geometry', 'GLIMS_ID', 'LATITUDE', 'LONGITUDE', 'WGMS_ID']
     dct = dict(subs.drop(columns=to_drop).squeeze())
     dct['coords'] = coords
     dct['bbox'] = bbox
+    dct['point'] = [point.x, point.y]
     return dct
 
 if __name__ == '__main__':
