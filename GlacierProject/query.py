@@ -8,7 +8,7 @@ import geopandas as gpd
 import fiona
 from shapely.geometry import Point
 
-def read_glims(fp, cols, outp=None, chunksize=50000):
+def open_glims_shp(fp, cols, outp=None, chunksize=50000):
     '''
     Open glims shapefile, keeping only most recent observations
 
@@ -49,62 +49,6 @@ def read_glims(fp, cols, outp=None, chunksize=50000):
         glims.to_file(outp)
     
     return glims
-
-def open_glims_shp(fp, usecols, outp=None, chunksize=50000):
-    '''
-    Open glims shapefile, keeping only most recent observations
-
-    :param fp: filepath to glims_polygons.shp
-    :param usecols: columns to keep
-    :param outp: output filepath
-    :param chunksize: chunksize for reading in shapefile in fiona
-    '''
-    file = fiona.open(fp)
-
-    def records(usecols, r):
-        ''' 
-        Read in shapefile, keeping only columns in usecols 
-
-        :param usecols: columns to keep
-        :param r: portions of file to open
-        '''
-        source = file[r[0]: r[1]]
-        for feature in source:
-            f = {k: feature[k] for k in ['geometry']}
-            f['properties'] = {k: feature['properties'][k] for k in usecols}
-            yield f
-    
-    # first df
-    df = (
-        gpd
-        .GeoDataFrame
-        .from_features(records(usecols, [0, chunksize]))
-        .drop_duplicates('glac_id', keep='last')
-    )
-    
-    # append chunks, dropping duplicates, until last chunk
-    c = chunksize + 1
-    to_append = (
-        gpd.GeoDataFrame
-        .from_features(records(usecols, [c, c + chunksize - 1]))
-    )
-
-    while len(to_append) == chunksize:
-        df = df.append(to_append, ignore_index=True).drop_duplicates('glac_id', keep='last')
-        c += chunksize
-
-    # last chunk
-    df = (
-        df
-        .append(gpd.GeoDataFrame.from_features(records(usecols, [c, None])), ignore_index=True)
-        .drop_duplicates('glac_id', keep='last')
-    )
-
-    if outp:
-        df.crs = {'init' :'epsg:4326'}
-        df.to_file(outp)
-    
-    return df
 
 def read_glims_gdf(fp, usecols=None, outp=None):
     '''
