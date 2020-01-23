@@ -17,4 +17,5 @@ data/*
 # misc
 *.csv
 client_secrets.json
+token.json
 archive.py
