@@ -6,11 +6,13 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import pandas as pd
 from datetime import date
+from GlacierProject.drive import *
 
 #Reorganize landsat download function
 def ee_download(
     glacierID, 
     glacierObject, 
+    drive_service,
     begDate='1984-01-01', 
     endDate='2019-01-01', 
     cloud_tol=20, 
@@ -167,25 +169,29 @@ def ee_download(
     # However that is where the help from developers group stopped helping, 
     # do not use it for creating folders and such, their solutions don't work with python API
     # Or are outdated
-    g_login = GoogleAuth()
-    g_login.LocalWebserverAuth()
-    drive = GoogleDrive(g_login)
+    # g_login = GoogleAuth()
+    # g_login.LocalWebserverAuth()
+    # drive = GoogleDrive(g_login)
 
     # Helpful links:
     # https://github.com/gsuitedevs/PyDrive/issues/72
     # https://towardsdatascience.com/how-to-manage-files-in-google-drive-with-python-d26471d91ecd
     nameforfile = str(glacierObject['glac_id']) + ".csv"
     # Assign mime type such that it creates a file in drive
-    folder_metadata = {
-    'title': str(glacierObject['glac_id']),
-    'mimeType': 'application/vnd.google-apps.folder'
-    }
-    folder = drive.CreateFile(folder_metadata)
-    folder.Upload()
+    # folder_metadata = {
+    # 'title': str(glacierObject['glac_id']),
+    # 'mimeType': 'application/vnd.google-apps.folder'
+    # }
+    # folder = drive.CreateFile(folder_metadata)
+    # folder.Upload()
+
+    # NEW DRIVE CODE:
+    parentID = get_parent_folder_id(drive_service, name='glaciers')
+    folderid = create_folder(drive_service, str(glacierObject['glac_id']), parentID=parentID)
 
     # Need the id of the folder because google drive does not work like a normal file system
     # operates on ID's found in metadata
-    folderid = folder['id']
+    # folderid = get_parent_folder_id(drive_service, name='glaciers')
     print('Folder ID: %s' % folderid)
     glacierObject["drivefile_id"] = str(folderid)
 

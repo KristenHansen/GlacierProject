@@ -15,7 +15,7 @@ SCOPES = 'https://www.googleapis.com/auth/drive'
 
 # Enclosing folder name:
 
-PARENT_FOLDER_NAME = 'Fraenkel_Test'
+PARENT_FOLDER_NAME = 'glaciers'
 
 # ---------------------------------------------------------------------
 #
@@ -131,6 +131,7 @@ def main():
     print('service started')
 
     parent_id = get_parent_folder_id(service)
+    print(parent_id)
     ids = get_folder_ids(service, parent_id)
 
     print(ids)

@@ -60,9 +60,9 @@ def open_glims_shp(poly_fp, cols, pt_fp=None, outp=None, chunksize=50000):
     pts_tomerge = pts[['glacier_id', 'x', 'y']].rename(columns={'glacier_id': 'glac_id'})
     glims = glims.merge(pts_tomerge).drop_duplicates('glac_id', keep='last')
 
-    # if outp:
-        # os.mkdir(outp)
-        # glims.to_file(outp + '/glims_polys.shp')
+    if outp:
+        os.mkdir(outp)
+        glims.to_file(outp + '/glims_polys.shp')
     
     return glims
 
