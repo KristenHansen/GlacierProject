@@ -4,6 +4,7 @@ from GlacierProject.drive import *
 import ee
 import threading
 from multiprocessing.dummy import Pool as ThreadPool
+from googleapiclient import _auth
 
 def authenticate():
 	# Earth Engine authentication
@@ -49,7 +50,7 @@ def single_glacier(
 	# creates drive location, adds metadata
 	# sends request to GEE
 
-def run_pipeline(glims_id_input, datadir, delim=None, ee_params=None):
+def run_pipeline(glims_id_input, datadir, delim=None, ee_params=None, pool=False):
 	'''
 	Runs the data extraction pipeline
 	:param glims_id_input: GLIMS IDs to pass through pipeline; either python list or text filepath
@@ -68,5 +69,9 @@ def run_pipeline(glims_id_input, datadir, delim=None, ee_params=None):
 		ids_list = glims_id_input
 
 	train_set = prep_joined(ids_list, datadir)
-	pool = ThreadPool(2)
-	pool.map(lambda glims_id: single_glacier(glims_id, train_set, drive_service), ids_list)
+	if pool:
+		pool = ThreadPool(2)
+		pool.map(lambda glims_id: single_glacier(glims_id, train_set, drive_service), ids_list)
+	else:
+		for glims_id in ids_list:
+				single_glacier(glims_id, train_set, drive_service)
