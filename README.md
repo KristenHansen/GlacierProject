@@ -10,5 +10,6 @@
     1. Have the `client_secrets.json` Google Drive API file inside the working directory
     2. Edit root folder name at the top of `drive.py` if desired (currently set to 'glaciers') 
 4. Run
-    1. Change directory in terminal to the directory with source code (`GlacierProject`)
-    2. Run `python3 main.py` for unix, `python main.py` for Windows
+    1. Setup `GlacierProject` by going to the root project directory and running `python3 setup.py develop` for unix, `python setup.py develop` for Windows
+    2. Change directory in terminal to the directory with source code (`GlacierProject`)
+    3. Run `python3 main.py` for unix, `python main.py` for Windows
