@@ -2,8 +2,6 @@ import csv
 import os
 import sys
 import ee
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
 import pandas as pd
 from datetime import date
 from GlacierProject.drive import *
@@ -14,7 +12,7 @@ def ee_download(
     glacierObject, 
     drive_service,
     begDate='1984-01-01', 
-    endDate='2019-01-01', 
+    endDate='2020-01-01', 
     cloud_tol=20, 
     landsat=True, 
     dem=True):
@@ -24,11 +22,11 @@ def ee_download(
     # Initial earth engine connection, key much be on your computer, thus 
     # you must once in terminal run ee.Authenticate() for any new computer 
     # that you are using for implementation of this google earth engine communication
-    # try:
-    #     ee.Initialize()
-    #     print('The Earth Engine package initialized successfully!')
-    # except ee.EEException:
-    #     print('The Earth Engine package failed to initialize!')
+    try:
+        ee.Initialize()
+        print('The Earth Engine package initialized successfully!')
+    except ee.EEException:
+        print('The Earth Engine package failed to initialize!')
     # except: 
     #     # Already initialized
     #     pass

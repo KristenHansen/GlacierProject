@@ -136,7 +136,7 @@ def sjoin(glims_gdf=None, wgms_gdf=None, glims_fp=None, wgms_fps=None, outp=None
         os.mkdir(outp)
         joined.to_file(outp + '/joined.shp')
     
-    return joined
+    return joined.drop_duplicates('glac_id')
 
 def load_train_set(fp):
     '''
