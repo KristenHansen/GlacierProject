@@ -27,9 +27,6 @@ def ee_download(
         print('The Earth Engine package initialized successfully!')
     except ee.EEException:
         print('The Earth Engine package failed to initialize!')
-    # except: 
-    #     # Already initialized
-    #     pass
 
     def cloudscore(image):
         '''
@@ -193,22 +190,22 @@ def ee_download(
     print('Folder ID: %s' % folderid)
     glacierObject["drivefile_id"] = str(folderid)
 
-    print("Creating CSV")
-    if os.path.exists("glacierInfo" + ".csv"):
-        with open('glacierInfo.csv','a') as f:
-            w = csv.DictWriter(f, glacierObject.keys())
-            if f.tell() == 0:
-                w.writeheader()
-                w.writerow(glacierObject)
-            else:
-                w.writerow(glacierObject)
+    # print("Creating CSV")
+    # if os.path.exists("glacierInfo" + ".csv"):
+    #     with open('glacierInfo.csv','a') as f:
+    #         w = csv.DictWriter(f, glacierObject.keys())
+    #         if f.tell() == 0:
+    #             w.writeheader()
+    #             w.writerow(glacierObject)
+    #         else:
+    #             w.writerow(glacierObject)
 
-    else:
-        csv_file = "glacierInfo" + ".csv"
-        csv_columns = ['GlimsID', 'bbox','L8Dates','L7Dates','L5Dates', 'fileaddress', 'drivefile_id']
-        with open(csv_file, "w") as f:
-            writer = csv.writer(f)
-            writer.writerow(glacierObject)
+    # else:
+    #     csv_file = "glacierInfo" + ".csv"
+    #     csv_columns = ['GlimsID', 'bbox','L8Dates','L7Dates','L5Dates', 'fileaddress', 'drivefile_id']
+    #     with open(csv_file, "w") as f:
+    #         writer = csv.writer(f)
+    #         writer.writerow(glacierObject)
 
     # No longer need the following until all glaciers are run
     # Now that we created the folder we must create the file that will 
