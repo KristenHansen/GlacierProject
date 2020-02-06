@@ -155,15 +155,16 @@ def load_train_set(fp):
         # return joined
         return
 
-def id_query(glims_id, subset):
+def id_query(glims_id, subset, scale_fact=1.1):
     '''
     Query info from given ID
     :param id: glims ID to query
     :param subset: subset of joined GeoDataFrame
+    :param scalefact: factor to scale bounding box by, default 10%
     '''
     subs = subset[subset.glac_id == glims_id]
     coords = list(zip(*np.asarray(subs.geometry.squeeze().exterior.coords.xy)))
-    bbox = list(zip(*np.asarray(subs.envelope.squeeze().exterior.coords.xy)))
+    bbox = list(zip(*np.asarray(subs.envelope.scale(xfact=scale_fact, yfact=scale_fact).squeeze().exterior.coords.xy)))
     to_drop = ['geometry', 'GLIMS_ID', 'WGMS_ID']
     dct = dict(subs.drop(columns=to_drop).squeeze())
     dct['coords'] = coords
