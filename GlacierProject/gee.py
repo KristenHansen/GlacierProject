@@ -62,11 +62,11 @@ def ee_download(
         count = colL8.size()
 
         # Filter out cloudiest images based on tolerance set as parameter
-        # We need bands 1-6
+        # We need bands 2-7
         withCloudiness = colL8.map(algorithm=cloudscore)
 
         filteredCollectionL8 = withCloudiness.filter(ee.Filter.lt('cloud', cloud_tol))
-        filteredCollectionL8 = filteredCollectionL8.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6'])
+        filteredCollectionL8 = filteredCollectionL8.select(['B2', 'B3', 'B4', 'B5', 'B6', 'B7'])
 
         # In order to collect dates for object and pushing images to drive 
         # make our collection a list thus we can loop over and the size of the collection
