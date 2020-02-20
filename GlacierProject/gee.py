@@ -11,6 +11,7 @@ def ee_download(
     glacierID, 
     glacierObject, 
     drive_service,
+    folder_name,
     begDate='1984-01-01', 
     endDate='2020-01-01', 
     cloud_tol=20, 
@@ -181,7 +182,10 @@ def ee_download(
     # folder.Upload()
 
     # NEW DRIVE CODE:
-    parentID = get_parent_folder_id(drive_service, name='glaciers')
+    try:
+        parentID = get_parent_folder_id(drive_service, name=folder_name)
+    except:
+        parentID = create_folder(drive_service, folder_name)
     folderid = create_folder(drive_service, str(glacierObject['glac_id']), parentID=parentID)
 
     # Need the id of the folder because google drive does not work like a normal file system

@@ -32,6 +32,7 @@ def single_glacier(
 	glims_id, 
 	subset,
 	drive_service, 
+	folder_name,
 	begDate='1984-01-01', 
     endDate='2020-01-01', 
     cloud_tol=20, 
@@ -45,12 +46,12 @@ def single_glacier(
 	'''
 	print('Beginning glacier', glims_id)
 	queried = id_query(glims_id, subset)
-	ee_download(glims_id, queried, drive_service)
+	ee_download(glims_id, queried, drive_service, folder_name)
 	# sends init req to GEE for metadata
 	# creates drive location, adds metadata
 	# sends request to GEE
 
-def run_pipeline(glims_id_input, datadir, delim=None, ee_params=None, pool=False):
+def run_pipeline(glims_id_input, datadir, folder_name, delim=None, ee_params=None, pool=False):
 	'''
 	Runs the data extraction pipeline
 	:param glims_id_input: GLIMS IDs to pass through pipeline; either python list or text filepath
@@ -58,7 +59,7 @@ def run_pipeline(glims_id_input, datadir, delim=None, ee_params=None, pool=False
 	:param delim: delimiter to split on if glims_id_input is a text file
 	:param ee_params: file containing custom parameters for Earth Engine collection
 	'''
-	# TODO: authenticate first
+	# authenticate first
 	drive_service = authenticate()
 
 	if delim:
@@ -71,10 +72,10 @@ def run_pipeline(glims_id_input, datadir, delim=None, ee_params=None, pool=False
 	train_set = prep_joined(ids_list, datadir)
 	if pool:
 		pool = ThreadPool(2)
-		pool.map(lambda glims_id: single_glacier(glims_id, train_set, drive_service), ids_list)
+		pool.map(lambda glims_id: single_glacier(glims_id, train_set, drive_service, folder_name), ids_list)
 	else:
 		for glims_id in ids_list:
-				single_glacier(glims_id, train_set, drive_service)
+				single_glacier(glims_id, train_set, drive_service, folder_name)
 
 if __name__ == '__main__':
-    run_pipeline('ids.txt', '../data/', delim='\n')
+    run_pipeline('ids.txt', '../data/', 'Glacier_Tiffs', delim='\n')

@@ -130,11 +130,8 @@ def main():
     service = start_service()
     print('service started')
 
-    parent_id = get_parent_folder_id(service)
-    print(parent_id)
-    ids = get_folder_ids(service, parent_id)
+    create_folder(service, 'Test')
 
-    print(ids)
     return
 
 
