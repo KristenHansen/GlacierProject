@@ -16,7 +16,8 @@ def ee_download(
     endDate='2020-01-01', 
     cloud_tol=20, 
     landsat=True, 
-    dem=True):
+    dem=True,
+    gmted=True):
     '''
     Download images from GEE
     '''
@@ -51,6 +52,24 @@ def ee_download(
     region = ee.Geometry.Polygon(glacierObject['bbox'])
     # Dummy request to Earth engine to compute glacier object values and send to toDrive
     # Creates image collections for later batch export
+
+    if gmted:
+        get_parent_folder_id(drive_service, name=str(glacierObject['glac_id']))
+        # DEM 60 degrees
+        # Create image from GEE and clip to our glacier region
+        DEM = ee.Image("USGS/GMTED2010")
+        DEM = DEM.clip(region)
+        #  export this image to drive in the glimsID folder specified in input object
+        task = ee.batch.Export.image.toDrive(
+            image = DEM.clip(region),
+            scale = 30,
+            region = region.bounds().getInfo()['coordinates'],
+            folder = str(glacierObject['glac_id']),
+            fileNamePrefix = 'USGS_GMTED2010')
+        task.start()
+        print("gmted sent to drive")
+        return 
+
     # Landsat 8 image collection
     print("Getting Landsat 8 collection")
     if date.fromisoformat(endDate) > date.fromisoformat("2013-01-01"):
@@ -186,6 +205,7 @@ def ee_download(
         parentID = get_parent_folder_id(drive_service, name=folder_name)
     except:
         parentID = create_folder(drive_service, folder_name)
+
     folderid = create_folder(drive_service, str(glacierObject['glac_id']), parentID=parentID)
 
     # Need the id of the folder because google drive does not work like a normal file system
@@ -227,7 +247,8 @@ def ee_download(
 
     # Now is the part behind the GEE server
     # First the DEM
-    if dem == True:
+    if dem:
+        # DEM 30 degrees
         # Create image from GEE and clip to our glacier region
         DEM = ee.Image("USGS/SRTMGL1_003")
         DEM = DEM.clip(region)
@@ -237,7 +258,7 @@ def ee_download(
             scale = 30,
             region = region.bounds().getInfo()['coordinates'],
             folder = str(glacierObject['glac_id']),
-            fileNamePrefix = 'USGS_DEM')
+            fileNamePrefix = 'USGS_SRTMGL1_003')
         task.start()
         print("dem sent to drive")
     if landsat == True:

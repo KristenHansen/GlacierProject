@@ -19,3 +19,4 @@ data/*
 client_secrets.json
 token.json
 archive.py
+*.log

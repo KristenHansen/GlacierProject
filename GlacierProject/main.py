@@ -4,6 +4,8 @@ from GlacierProject.drive import *
 import ee
 import threading
 from multiprocessing.dummy import Pool as ThreadPool
+from tenacity import retry, wait_exponential
+import logging
 
 def authenticate():
 	# Earth Engine authentication
@@ -28,6 +30,7 @@ def prep_joined(glimsid_list, datadir):
 	joined = load_train_set(datadir + 'joined/joined.shp')
 	return joined[joined.glac_id.isin(glimsid_list)]
 
+@retry(wait=wait_exponential(multiplier=1, min=2, max=20))
 def single_glacier(
 	glims_id, 
 	subset,
@@ -37,7 +40,8 @@ def single_glacier(
     endDate='2020-01-01', 
     cloud_tol=20, 
     landsat=True, 
-    dem=True):
+    dem=True,
+	gmted=True):
 	'''
 	Queries a dictionary of glacier data, requests data
 	from GEE
@@ -78,4 +82,9 @@ def run_pipeline(glims_id_input, datadir, folder_name, delim=None, ee_params=Non
 				single_glacier(glims_id, train_set, drive_service, folder_name)
 
 if __name__ == '__main__':
-    run_pipeline('ids.txt', '../data/', 'Glacier_Tiffs', delim='\n')
+	log_format = '%(asctime)s %(filename)s: %(message)s'
+	logging.basicConfig(filename="test.log", format=log_format)
+	try:
+		run_pipeline('ids.txt', '../data/', 'Glacier_Tiffs', delim='\n')
+	except Exception as e:
+		logging.error("exception occurred", exc_info=True)
